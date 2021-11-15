@@ -1,28 +1,24 @@
--- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
--- SPDX-License-Identifier: Apache-2.0
--- ** Continuous Filter ** 
-    -- Performs a continuous filter based on a WHERE condition.
-    --          .----------.   .----------.   .----------.              
-    --          |  SOURCE  |   |  INSERT  |   |  DESTIN. |              
-    -- Source-->|  STREAM  |-->| & SELECT |-->|  STREAM  |-->Destination
-    --          |          |   |  (PUMP)  |   |          |              
-    --          '----------'   '----------'   '----------'               
-    -- STREAM (in-application): a continuously updated entity that you can SELECT from and INSERT into like a TABLE
-    -- PUMP: an entity used to continuously 'SELECT ... FROM' a source STREAM, and INSERT SQL results into an output STREAM
-    -- Create output stream, which can be used to send to a destination
-CREATE OR REPLACE STREAM "DESTINATION_SQL_STREAM" 
-(
-    "transactionId"     varchar(64),
-    "name"              varchar(64),
-    "age"               integer,
-    "address"           varchar(256),
-    "city"              varchar(32),
-    "state"             varchar(32),
-    "transaction"       integer,
-    "bankId"            varchar(32),
-    "createdAt"         varchar(32)
+CREATE OR REPLACE STREAM "DESTINATION_SQL_STREAM" (
+  "bankId" varchar(256),
+  "lastHourSum" double,
+  "lastHourTotal" double,
+  "lastFiveMinutes" double,
+  "lastThreeSum" double
 );
 CREATE OR REPLACE PUMP "STREAM_PUMP" AS INSERT INTO "DESTINATION_SQL_STREAM"
-SELECT STREAM "transactionId", "name", "age", "address", "city", "state", "transaction", "bankId", "createdAt"
-    FROM "SOURCE_SQL_STREAM_001"
-    WHERE "transaction" > 9000;
+SELECT STREAM
+  "bankId",
+  sum("transaction") OVER lastHour as lastHourSum,
+  count(*) OVER lastHour as lastHourTotal,
+  count(*) OVER lastFiveMinutes as lastFiveMinutes,
+  sum("transaction") OVER lastThree as lastThreeSum
+FROM "SOURCE_SQL_STREAM_001"
+WINDOW
+  lastHour AS (RANGE INTERVAL '1' HOUR PRECEDING),
+  lastThree AS (ROWS 3 PRECEDING),
+  lastFiveMinutes AS (RANGE INTERVAL '5' MINUTE PRECEDING),
+  lastZeroRows AS (ROWS CURRENT ROW),
+  lastZeroSeconds AS (RANGE CURRENT ROW),
+  lastTwoSameTicker AS (PARTITION BY "bankId" ROWS 2 PRECEDING),
+  lastHourSameTicker AS (PARTITION BY "bankId" RANGE INTERVAL '1' HOUR PRECEDING)
+

@@ -16,7 +16,7 @@ from faker import Faker
 
 # This boots up the kinesis analytic application so you don't have to click "run" on the kinesis analytics console
 try:
-    kinesisanalytics = boto3.client("kinesisanalyticsv2", region_name="us-east-1")
+    kinesisanalytics = boto3.client("kinesisanalyticsv2", region_name="eu-west-1")
     kinesisanalytics.start_application(
         ApplicationName="abnormality-detector",
         RunConfiguration={
@@ -35,8 +35,8 @@ try:
 except kinesisanalytics.exceptions.ResourceInUseException:
     print("Application already running, skipping start up step")
 
-rootSteamName = input("Please enter the stream name that was outputted from cdk deploy - (StreamingSolutionWithCdkStack.RootStreamName): ")
-kinesis = boto3.client("kinesis", region_name="us-east-1")
+rootSteamName = 'StreamingSolutionWithCdkStack-RootStream89352062-hfKGDnAhAVOA'
+kinesis = boto3.client("kinesis", region_name="eu-west-1")
 fake = Faker()
 
 # Base table, GUID with transaction key, GSI with a bank id (of 5 notes) pick one of the five bank IDs. Group by bank ID. sorted by etc

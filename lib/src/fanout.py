@@ -2,6 +2,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import pprint
 import base64
 import json
 import os
@@ -17,19 +18,18 @@ def handler(event, context):
     payload = event["records"][0]["data"]
     data_dump = base64.b64decode(payload).decode("utf-8")
     data = json.loads(data_dump)
+    pprint.pprint(data)
 
     table = ddb.Table(os.environ["TABLE_NAME"])
 
-    item = {
-        "transactionId": data["transactionId"],
-        "name": data["name"],
-        "city": data["city"],
-        "transaction": data["transaction"],
-        "bankId": data["bankId"],
-        "createdAt": data["createdAt"],
-        "customEnrichment": data["transaction"] + 500,  # Everyone gets an extra $500 woot woot
-        "inspectedAt": str(datetime.now())
-    }
+    item = data
+    item['lastHourSum'] = int(item['lastHourSum'])
+    item['lastHourTotal'] = int(item['lastHourTotal'])
+    item['lastThreeSum'] = int(item['lastThreeSum'])
+    item['lastFiveMinutes'] = int(item['lastFiveMinutes'])
+    item['createdAt'] = str(datetime.now())
+    item['inspectedAt'] = str(datetime.now())
+    item['transactionId'] = item['createdAt']
 
     # Best effort, Kinesis Analytics Output is "at least once" delivery, meaning this lambda function can be invoked multiple times with the same item
     # We can ensure idempotency with a condition expression
